@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Turnos - Gimnasio</title>
+    <style>
+        /* Estilo oscuro */
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3d3d3d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --accent: #4a6fa5;
+            --accent-hover: #5a7fb5;
+            --border: #444;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--accent);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        .tab.active {
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--bg-tertiary);
+            margin-bottom: -1px;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0 5px 5px 5px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .schedule {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .time-slot {
+            padding: 15px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .time-slot:hover {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .time-slot.selected {
+            background-color: var(--accent);
+            color: white;
+            font-weight: bold;
+        }
+
+        .time-slot.booked {
+            background-color: var(--danger);
+            color: white;
+            cursor: not-allowed;
+        }
+
+        .time-slot.booked-by-user {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text-primary);
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: var(--bg-tertiary);
+            cursor: not-allowed;
+        }
+
+        .reservations-list {
+            margin-top: 20px;
+        }
+
+        .reservation-item {
+            padding: 15px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reservation-info {
+            flex: 1;
+        }
+
+        .reservation-actions button {
+            margin-left: 10px;
+            padding: 5px 10px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        select {
+            padding: 10px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text-primary);
+        }
+
+        .no-reservations {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .schedule {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gestión de Turnos - Gimnasio</h1>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="reservar">Reservar Turno</div>
+            <div class="tab" data-tab="ver-reservas">Ver Reservas</div>
+        </div>
+        
+        <div class="tab-content active" id="reservar">
+            <h2>Selecciona un día y horario</h2>
+            
+            <div class="form-group">
+                <label for="reservation-day">Día:</label>
+                <select id="reservation-day">
+                    <option value="1">Lunes</option>
+                    <option value="2">Martes</option>
+                    <option value="3">Miércoles</option>
+                    <option value="4">Jueves</option>
+                    <option value="5">Viernes</option>
+                </select>
+            </div>
+            
+            <h3>Horarios disponibles</h3>
+            <div class="schedule" id="time-slots">
+                <!-- Los horarios se cargarán aquí dinámicamente -->
+            </div>
+            
+            <div class="form-group" id="reservation-form" style="display: none;">
+                <h3>Completa tus datos</h3>
+                <div class="form-group">
+                    <label for="user-name">Nombre:</label>
+                    <input type="text" id="user-name" placeholder="Ingresa tu nombre">
+                </div>
+                <div class="form-group">
+                    <label for="user-lastname">Apellido:</label>
+                    <input type="text" id="user-lastname" placeholder="Ingresa tu apellido">
+                </div>
+                <button id="confirm-reservation">Confirmar Reserva</button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="ver-reservas">
+            <h2>Reservas existentes</h2>
+            
+            <div class="filter-controls">
+                <select id="filter-day">
+                    <option value="all">Todos los días</option>
+                    <option value="1">Lunes</option>
+                    <option value="2">Martes</option>
+                    <option value="3">Miércoles</option>
+                    <option value="4">Jueves</option>
+                    <option value="5">Viernes</option>
+                </select>
+                <button id="refresh-reservations">Actualizar</button>
+            </div>
+            
+            <div class="reservations-list" id="reservations-container">
+                <!-- Las reservas se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función principal que se ejecuta cuando el DOM está listo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables importantes para el funcionamiento
+            const gymSchedule = {
+                morning: { start: 8, end: 12 },
+                evening: { start: 17, end: 21 }
+            };
+            
+            let selectedTimeSlot = null;
+            let selectedDay = null;
+            
+            // Elementos del DOM que usaremos frecuentemente
+            const timeSlotsContainer = document.getElementById('time-slots');
+            const reservationForm = document.getElementById('reservation-form');
+            const confirmReservationBtn = document.getElementById('confirm-reservation');
+            const reservationsContainer = document.getElementById('reservations-container');
+            const reservationDaySelect = document.getElementById('reservation-day');
+            const filterDaySelect = document.getElementById('filter-day');
+            const refreshReservationsBtn = document.getElementById('refresh-reservations');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Inicializamos la aplicación
+            initApp();
+            
+            // Función para inicializar la aplicación
+            function initApp() {
+                generateTimeSlots();
+                setupEventListeners();
+                loadReservations();
+            }
+            
+            // Configuramos los event listeners
+            function setupEventListeners() {
+                // Cambiar día de reserva
+                reservationDaySelect.addEventListener('change', function() {
+                    selectedDay = this.value;
+                    selectedTimeSlot = null;
+                    reservationForm.style.display = 'none';
+                    generateTimeSlots();
+                });
+                
+                // Confirmar reserva
+                confirmReservationBtn.addEventListener('click', confirmReservation);
+                
+                // Filtrar reservas
+                filterDaySelect.addEventListener('change', loadReservations);
+                refreshReservationsBtn.addEventListener('click', loadReservations);
+                
+                // Tabs para cambiar entre vistas
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        const tabId = this.getAttribute('data-tab');
+                        
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tabContents.forEach(tc => tc.classList.remove('active'));
+                        
+                        this.classList.add('active');
+                        document.getElementById(tabId).classList.add('active');
+                        
+                        if (tabId === 'ver-reservas') {
+                            loadReservations();
+                        }
+                    });
+                });
+            }
+            
+            // Genera los horarios disponibles según el día seleccionado
+            function generateTimeSlots() {
+                timeSlotsContainer.innerHTML = '';
+                const day = reservationDaySelect.value;
+                const reservations = getReservationsForDay(day);
+                
+                // Generamos horarios de la mañana (8-12)
+                for (let hour = gymSchedule.morning.start; hour < gymSchedule.morning.end; hour++) {
+                    createTimeSlot(day, hour, reservations);
+                }
+                
+                // Generamos horarios de la tarde (17-21)
+                for (let hour = gymSchedule.evening.start; hour < gymSchedule.evening.end; hour++) {
+                    createTimeSlot(day, hour, reservations);
+                }
+            }
+            
+            // Crea un elemento de horario individual
+            function createTimeSlot(day, hour, reservations) {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot';
+                
+                const timeLabel = `${hour}:00 - ${hour + 1}:00`;
+                timeSlot.textContent = timeLabel;
+                
+                // Verificamos si este horario ya está reservado
+                const reservationKey = `${day}-${hour}`;
+                const existingReservation = reservations.find(r => r.key === reservationKey);
+                
+                if (existingReservation) {
+                    timeSlot.classList.add('booked');
+                    timeSlot.title = `Reservado por: ${existingReservation.name} ${existingReservation.lastname}`;
+                } else {
+                    timeSlot.addEventListener('click', function() {
+                        selectTimeSlot(day, hour, timeSlot);
+                    });
+                }
+                
+                timeSlotsContainer.appendChild(timeSlot);
+            }
+            
+            // Selecciona un horario para reservar
+            function selectTimeSlot(day, hour, element) {
+                // Deseleccionamos cualquier horario previamente seleccionado
+                document.querySelectorAll('.time-slot.selected').forEach(slot => {
+                    slot.classList.remove('selected');
+                });
+                
+                // Seleccionamos el nuevo horario
+                selectedDay = day;
+                selectedTimeSlot = hour;
+                element.classList.add('selected');
+                
+                // Mostramos el formulario de reserva
+                reservationForm.style.display = 'block';
+            }
+            
+            // Confirma una reserva
+            function confirmReservation() {
+                const name = document.getElementById('user-name').value.trim();
+                const lastname = document.getElementById('user-lastname').value.trim();
+                
+                if (!name || !lastname) {
+                    alert('Por favor ingresa tu nombre y apellido');
+                    return;
+                }
+                
+                if (!selectedDay || !selectedTimeSlot) {
+                    alert('Por favor selecciona un horario');
+                    return;
+                }
+                
+                const reservation = {
+                    key: `${selectedDay}-${selectedTimeSlot}`,
+                    day: selectedDay,
+                    hour: selectedTimeSlot,
+                    name: name,
+                    lastname: lastname,
+                    timestamp: new Date().toISOString()
+                };
+                
+                saveReservation(reservation);
+                
+                // Limpiamos el formulario
+                document.getElementById('user-name').value = '';
+                document.getElementById('user-lastname').value = '';
+                reservationForm.style.display = 'none';
+                selectedTimeSlot = null;
+                
+                // Actualizamos la vista de horarios
+                generateTimeSlots();
+                
+                // Mostramos mensaje de éxito
+                alert(`Reserva confirmada para el ${getDayName(selectedDay)} a las ${selectedTimeSlot}:00`);
+            }
+            
+            // Guarda una reserva en el localStorage
+            function saveReservation(reservation) {
+                let reservations = JSON.parse(localStorage.getItem('gymReservations') || '[]');
+                reservations.push(reservation);
+                localStorage.setItem('gymReservations', JSON.stringify(reservations));
+            }
+            
+            // Carga las reservas según el filtro seleccionado
+            function loadReservations() {
+                const dayFilter = filterDaySelect.value;
+                let reservations = JSON.parse(localStorage.getItem('gymReservations') || '[]');
+                
+                // Filtramos por día si es necesario
+                if (dayFilter !== 'all') {
+                    reservations = reservations.filter(r => r.day === dayFilter);
+                }
+                
+                // Ordenamos por día y hora
+                reservations.sort((a, b) => {
+                    if (a.day !== b.day) return a.day - b.day;
+                    return a.hour - b.hour;
+                });
+                
+                // Mostramos las reservas
+                displayReservations(reservations);
+            }
+            
+            // Muestra las reservas en la interfaz
+            function displayReservations(reservations) {
+                reservationsContainer.innerHTML = '';
+                
+                if (reservations.length === 0) {
+                    const noReservations = document.createElement('div');
+                    noReservations.className = 'no-reservations';
+                    noReservations.textContent = 'No hay reservas para mostrar';
+                    reservationsContainer.appendChild(noReservations);
+                    return;
+                }
+                
+                reservations.forEach(reservation => {
+                    const reservationItem = document.createElement('div');
+                    reservationItem.className = 'reservation-item';
+                    
+                    const dayName = getDayName(reservation.day);
+                    const timeLabel = `${reservation.hour}:00 - ${reservation.hour + 1}:00`;
+                    
+                    reservationItem.innerHTML = `
+                        <div class="reservation-info">
+                            <strong>${dayName}</strong> - ${timeLabel}<br>
+                            ${reservation.name} ${reservation.lastname}
+                        </div>
+                        <div class="reservation-actions">
+                            <button class="cancel-btn" data-key="${reservation.key}">Cancelar</button>
+                        </div>
+                    `;
+                    
+                    reservationsContainer.appendChild(reservationItem);
+                });
+                
+                // Agregamos event listeners a los botones de cancelar
+                document.querySelectorAll('.cancel-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const key = this.getAttribute('data-key');
+                        cancelReservation(key);
+                    });
+                });
+            }
+            
+            // Cancela una reserva
+            function cancelReservation(key) {
+                if (!confirm('¿Estás seguro de que quieres cancelar esta reserva?')) {
+                    return;
+                }
+                
+                let reservations = JSON.parse(localStorage.getItem('gymReservations') || '[]');
+                reservations = reservations.filter(r => r.key !== key);
+                localStorage.setItem('gymReservations', JSON.stringify(reservations));
+                
+                loadReservations();
+                
+                // Si estamos en la pestaña de reservar, actualizamos los horarios
+                if (document.querySelector('.tab.active').getAttribute('data-tab') === 'reservar') {
+                    generateTimeSlots();
+                }
+            }
+            
+            // Obtiene las reservas para un día específico
+            function getReservationsForDay(day) {
+                const reservations = JSON.parse(localStorage.getItem('gymReservations') || '[]');
+                return reservations.filter(r => r.day === day);
+            }
+            
+            // Convierte el número de día a nombre
+            function getDayName(dayNumber) {
+                const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+                return days[parseInt(dayNumber) - 1];
+            }
+        });
+    </script>
+</body>
+</html>
